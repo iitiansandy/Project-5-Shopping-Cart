@@ -40,7 +40,7 @@ const createProducts = async function (req, res) {
         .send({ status: false, message: "Provide the title Name " });
     }
 
-    let checkTitle = await productModel.findOne({ title: title });
+    let checkTitle = await productModel.findOne({ title: title.toLowerCase() });
     if (checkTitle) {
       return res.status(400).send({
         status: false,
@@ -176,7 +176,6 @@ const getProducts = async function (req, res) {
     if (queryData.name) {
       filterData["title"] = {};
       filterData["title"] = queryData.name.toLowerCase();
-      filterData["title"]["$options"] = "i"; //"i" for case insensitive.
     }
     // price > 300
     if (!validString(queryData.priceGreaterThan)) {
@@ -336,13 +335,21 @@ const updateProductbyId = async function (req, res) {
     }
 
     let body = req.body;
-    let files = req.files;
-    if (!files) {
-      if (isValidRequestBody(body))
-        return res
-          .status(400)
-          .send({ status: false, message: "Pls enter Some Data To update" });
+
+    if (!isValidRequestBody(body)) {
+      return res
+        .status(400)
+        .send({ status: false, message: "Pls enter Some Data To update" });
     }
+
+    let files = req.files;
+
+    if (!files) {
+      return res
+        .status(400)
+        .send({ status: false, message: "Pls provide files" });
+    }
+
     let {
       title,
       description,
@@ -363,15 +370,19 @@ const updateProductbyId = async function (req, res) {
         return res
           .status(400)
           .send({ status: false, message: "Enter Valid Title Name" });
-      if (await productModel.findOne({ title: title }))
+
+      let istitle = await productModel.findOne({ title: title.toLowerCase() });
+
+      if (istitle)
         return res
           .status(400)
           .send({ status: false, message: `${title} is already exists` });
+
       let title1 = title
         .split(" ")
         .filter((e) => e)
         .join(" ");
-      data.title = title1;
+      data.title = title1.toLowerCase();
     }
 
     if ("description" in body) {
@@ -457,13 +468,7 @@ const updateProductbyId = async function (req, res) {
             message: `This Size ( ${sizes[i]} ) is not from these ['S', 'XS','M','X', 'L','XXL','XL']`,
           });
       }
-      
-      // let savedSize = await productModel
-      //   .findById(productId)
-      //   .select({ availableSizes: 1, _id: 0 });
 
-      // let value = savedSize["availableSizes"].valueOf();
-    
       let savedata = await productModel.findOneAndUpdate(
         { _id: productId },
         { availableSizes: sizes },
